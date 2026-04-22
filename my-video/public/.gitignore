@@ -1,5 +1,5 @@
-# Video assets are too large for git — host via GitHub Releases or LFS
-*.mp4
+# Source video too large for git — host via GitHub Releases
+WHP_Zoom.mp4
 *.mov
 *.avi
 *.webm
