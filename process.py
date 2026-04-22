@@ -19,29 +19,32 @@ import re
 import json
 import subprocess
 from pathlib import Path
+import imageio_ffmpeg
 
 SILENCE_DB = -40      # dB below which audio is considered silent
 SILENCE_MIN = 0.5     # minimum silence duration to remove (seconds)
 SEGMENT_BREAK = 2.5   # silence duration that marks a segment boundary (seconds)
 PADDING = 0.15        # seconds of audio kept at speech edges after trimming
 
+FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def ffprobe_duration(path):
-    r = subprocess.run(
-        ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(path)],
-        capture_output=True, text=True, check=True,
-    )
-    return float(json.loads(r.stdout)["format"]["duration"])
+def get_duration(path):
+    from moviepy import VideoFileClip
+    clip = VideoFileClip(str(path))
+    d = clip.duration
+    clip.close()
+    return d
 
 
 def detect_silences(path):
     """Return list of (start, end) silent intervals in seconds."""
     r = subprocess.run(
-        ["ffmpeg", "-i", str(path), "-af",
+        [FFMPEG, "-i", str(path), "-af",
          f"silencedetect=noise={SILENCE_DB}dB:d={SILENCE_MIN}", "-f", "null", "-"],
         capture_output=True, text=True,
     )
@@ -49,7 +52,7 @@ def detect_silences(path):
     ends   = [float(x) for x in re.findall(r"silence_end: ([\d.]+)",   r.stderr)]
     pairs  = list(zip(starts, ends))
     if len(starts) > len(ends):
-        pairs.append((starts[-1], ffprobe_duration(path)))
+        pairs.append((starts[-1], get_duration(path)))
     return pairs
 
 
@@ -164,7 +167,7 @@ def split(input_path, breaks, duration, srt_path, output_dir):
         escaped_srt = str(seg_srt).replace("\\", "/").replace(":", "\\:")
         subprocess.run(
             [
-                "ffmpeg", "-y",
+                FFMPEG, "-y",
                 "-ss", f"{seg_start:.3f}", "-to", f"{seg_end:.3f}",
                 "-i", str(input_path),
                 "-vf", (
@@ -198,7 +201,7 @@ def main():
 
     # 1. Detect silences in the original file
     print("[1/4] Detecting silences...")
-    duration = ffprobe_duration(input_path)
+    duration = get_duration(input_path)
     silences = detect_silences(input_path)
     print(f"      {len(silences)} silent regions in {duration:.0f}s of video")
 
@@ -207,7 +210,7 @@ def main():
     intervals = speech_intervals(silences, duration)
     trimmed = out_dir / "trimmed.mp4"
     trim_silences(input_path, trimmed, intervals)
-    trimmed_duration = ffprobe_duration(trimmed)
+    trimmed_duration = get_duration(trimmed)
     print(f"      {duration:.0f}s → {trimmed_duration:.0f}s  ({trimmed.name})")
 
     # 3. Transcribe trimmed video
