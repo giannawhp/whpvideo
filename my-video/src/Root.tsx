@@ -8,14 +8,14 @@ import { GettingStartedScene } from './scenes/GettingStartedScene';
 import { WritingScene } from './scenes/WritingScene';
 import { BestPracticesScene } from './scenes/BestPracticesScene';
 import { OutroScene } from './scenes/OutroScene';
+import { TutorialVideo } from './TutorialVideo';
 import { SCENE, TRANSITION_FRAMES, FPS } from './constants';
+import { VIDEO_FPS, VIDEO_TOTAL_FRAMES } from './videoConstants';
 
-// Scene frames: 90 + 210 + 180 + 270 + 210 + 90 = 1050
-// Transitions: 5 × 15 = 75 overlap
-// Total: 975 frames (32.5s)
-const TOTAL_FRAMES = 1050 - 5 * TRANSITION_FRAMES;
+// Animated slides intro video (32.5s)
+const SLIDES_TOTAL_FRAMES = 1050 - 5 * TRANSITION_FRAMES;
 
-const WHPVideo: React.FC = () => (
+const WHPSlidesVideo: React.FC = () => (
   <TransitionSeries>
     <TransitionSeries.Sequence durationInFrames={SCENE.title}>
       <TitleScene />
@@ -59,12 +59,24 @@ const WHPVideo: React.FC = () => (
 );
 
 export const RemotionRoot: React.FC = () => (
-  <Composition
-    id="WHPVideo"
-    component={WHPVideo}
-    durationInFrames={TOTAL_FRAMES}
-    fps={FPS}
-    width={1920}
-    height={1080}
-  />
+  <>
+    {/* Main tutorial: source Zoom recording trimmed + overlaid with title/chapter cards */}
+    <Composition
+      id="WHPTutorial"
+      component={TutorialVideo}
+      durationInFrames={VIDEO_TOTAL_FRAMES}
+      fps={VIDEO_FPS}
+      width={1920}
+      height={1080}
+    />
+    {/* Standalone animated intro slides (32.5s) */}
+    <Composition
+      id="WHPIntroSlides"
+      component={WHPSlidesVideo}
+      durationInFrames={SLIDES_TOTAL_FRAMES}
+      fps={FPS}
+      width={1920}
+      height={1080}
+    />
+  </>
 );
